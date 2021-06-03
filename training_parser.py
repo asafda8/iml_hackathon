@@ -203,11 +203,11 @@ def replace_zero_with_Nan(df):
 def replace_with_median(df, feature):
     med = df[feature].median()
     df[feature] = df[feature].fillna(med)
-    return df
+    return df, med
 
 def main_parse(train_path):
     df = pd.read_csv(train_path)
-    df = df[~((df['status'] == 'Released') & (df['revenue'] == 0))]
+    df = df[(df.status != 'Released') | (df.revenue != 0)]
     # df = dummy_variable_genre(df)
     # df = dummy_variable_spoken_languages(df)
     # vote_count_replace(df)
@@ -217,12 +217,12 @@ def main_parse(train_path):
     df['spoken_languages'] = df['spoken_languages'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
     df['production_companies'] = df['production_companies'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
     df['genres'] = df['genres'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
-    df, castcols = encode_json_column(df, 19, "name", 100, 1)
+    df, castcols = encode_json_column(df, 19, "name", 200, 1)
 
-    df,crewcols = encode_json_column(df, 19, "name", 100, 1)
-    df, keywords_cols = encode_json_column(df, 18, "name", 100, 1)
-    df, spoken_languages_cols = encode_json_column(df, 14, "english_name", 20, 1)
-    df, companies_cols = encode_json_column(df, 10, "name", 100, 1)
+    df,crewcols = encode_json_column(df, 19, "name", 200, 1)
+    df, keywords_cols = encode_json_column(df, 18, "name", 200, 1)
+    df, spoken_languages_cols = encode_json_column(df, 14, "english_name", 50, 1)
+    df, companies_cols = encode_json_column(df, 10, "name", 200, 1)
     df, genres_cols = encode_json_column(df, 3, "name", 1000, 1)
 
     dummy_variable_for_collection(df)
@@ -230,38 +230,41 @@ def main_parse(train_path):
     df = remove_unuseful(df)
     df.loc[df['budget'] == 0, 'budget'] = np.nan
     df.loc[((df['runtime'] <= 0)|(df['runtime'] > 300)), 'runtime'] = np.nan
-    replace_with_median(df, 'budget')
-    replace_with_median(df, 'runtime')
-    return df, [castcols, crewcols, keywords_cols, spoken_languages_cols, companies_cols, genres_cols]
+    df,budget_med = replace_with_median(df, 'budget')
+    df,vote_med = replace_with_median(df, 'vote_count')
+    df,runtime_med = replace_with_median(df, 'runtime')
+    global_lst = [castcols, crewcols, keywords_cols, spoken_languages_cols, companies_cols, genres_cols]
+    return df, [castcols, crewcols, keywords_cols, spoken_languages_cols, companies_cols, genres_cols] ,\
+           [budget_med, vote_med, runtime_med]
 
 
-def test_parse(df, lst):
-    df['cast'] = df['cast'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
-    df['crew'] = df['crew'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
-    df['keywords'] = df['keywords'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
-    df['spoken_languages'] = df['spoken_languages'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
-    df['production_companies'] = df['production_companies'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
-    df['genres'] = df['genres'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
-    df = encode_json_column_test(df, lst[0], 19, "name", 0)
+def test_parse(path, lst, lst2):
+    df2 = pd.read_csv(path)
+    df2['cast'] = df2['cast'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
+    df2['crew'] = df2['crew'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
+    df2['keywords'] = df2['keywords'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
+    df2['spoken_languages'] = df2['spoken_languages'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
+    df2['production_companies'] = df2['production_companies'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
+    df2['genres'] = df2['genres'].apply(lambda x: x.replace("\'", "\"") if x == x else "")
+    df2 = encode_json_column_test(df2, lst[0], 19, "name", 0)
 
-    df = encode_json_column_test(df, lst[1], 19, "name",  0)
-    df = encode_json_column_test(df, lst[2], 18, "name",  0)
-    df = encode_json_column_test(df, lst[3], 14, "english_name", 0)
-    df = encode_json_column_test(df, lst[4], 10, "name", 0)
-    df = encode_json_column_test(df, lst[5], 3, "name", 0)
+    df2 = encode_json_column_test(df2, lst[1], 19, "name",  0)
+    df2 = encode_json_column_test(df2, lst[2], 18, "name",  0)
+    df2 = encode_json_column_test(df2, lst[3], 14, "english_name", 0)
+    df2 = encode_json_column_test(df2, lst[4], 10, "name", 0)
+    df2 = encode_json_column_test(df2, lst[5], 3, "name", 0)
 
-    dummy_variable_for_collection(df)
-    df = process_time(df)
-    df = remove_unuseful(df)
-    df.loc[df['budget'] == 0, 'budget'] = np.nan
-    df.loc[((df['runtime'] <= 0) | (df['runtime'] > 300)), 'runtime'] = np.nan
-    replace_with_median(df, 'budget')
-    replace_with_median(df, 'runtime')
-    return df
+    dummy_variable_for_collection(df2)
+    df2 = process_time(df2)
+    df2 = remove_unuseful(df2)
+    df2.loc[df2['budget'] == 0, 'budget'] = np.nan
+    df2.loc[((df2['runtime'] <= 0) | (df2['runtime'] > 300)), 'runtime'] = np.nan
+    df2['budget'] = df2['budget'].fillna(lst2[0])
+    df2['vote_count'] = df2['vote_count'].fillna(lst2[1])
+    df2['runtime'] = df2['runtime'].fillna(lst2[2])
+    return df2
 
 def parse_train_test(train_path, test_path):
-    train_df, lst = main_parse(train_path)
-    df2 = pd.read_csv(test_path)
-    test_df =  test_parse(df2, lst)
+    train_df, lst, lst2 = main_parse(train_path)
+    test_df = test_parse(test_path, lst, lst2)
     return train_df, test_df
-

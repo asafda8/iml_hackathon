@@ -41,7 +41,7 @@ def encode_json_column_test(pandas_data_frame, name_lst, json_column_index=0, js
 
                     # if this id hasn't been seen yet, add it to the dataframe with default 0
 
-                    pandas_data_frame.loc[count, popular_name_from_training] = 1\
+                    pandas_data_frame.loc[count, popular_name_from_training] = 1
 
         count += 1
 
