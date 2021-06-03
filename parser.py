@@ -3,7 +3,6 @@ import ast
 from datetime import datetime
 import numpy as np
 import math
-from json_encoder import encode_json_column
 genre_dict = {}
 spoken_dict = {}
 character_list = {}
@@ -181,6 +180,8 @@ def top_actors(df):
         df[str(actor) + '_actor'] = df['crew'].apply(exist)
     df = df.drop('crew', axis='columns')
     return df
+
+
 def dummy_variable_for_collection(df):
     df['belongs_to_collection'] = df['belongs_to_collection'].fillna(0)
     df['belongs_to_collection'].replace(regex=r'[^0]+', value=1, inplace=True)
